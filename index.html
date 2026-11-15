@@ -131,7 +131,7 @@ const nice = d => { const [y,m,dd] = d.split("-"); return dd+"-"+m+"-"+y; };
 let LANG = "ru";
 try { LANG = localStorage.getItem("ps_lang") || "ru"; } catch(_){}
 const L = (ru, en) => LANG === "en" ? en : ru;
-function toast(msg){ const t=$("#toast"); t.firstElementChild.textContent=msg; t.style.display="flex"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",3200); }
+function toast(msg){ const t=$("#toast"); t.firstElementChild.textContent=msg; t.style.display="flex"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",Math.max(3200,msg.length*70)); }
 function download(name, text, type){
   try { const u = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 8000); toast(L("File utar gayi: ","Downloaded: ") + name); }
   catch(_){ toast(L("Yahan file nahi utar sakti","Download is not available here")); }
@@ -456,7 +456,7 @@ function rowDelivery(r, showName){
   const c = cust(r.data.cust), d = r.data;
   const what = d.type === "tank" ? `${num(d.qty).toLocaleString()} ${L("litre","litres")}` : `${d.qty} ${L("botal","bottles")}${num(d.ret) ? ` · ${d.ret} ${L("khali wapas","empties")}` : ""}`;
   const due = num(d.amount) - num(d.paid);
-  return `<div class="row"><div class="g"><b>${showName ? e(c ? c.data.name : "?") : nice(r.day)}</b><small>${what}${d.by ? " · " + e(d.by) : ""}${showName ? "" : ""}</small></div>
+  return `<div class="row"><div class="g"><b>${showName ? e(c ? c.data.name : "?") : nice(r.day)}</b><small>${what}${num(d.paid) ? ` · ${L("naqd","cash")} ${rs(d.paid)}` : ""}${d.by ? " · " + e(d.by) : ""}</small></div>
   <div class="r">${rs(d.amount)}<br><span class="pill ${due > 0 ? "bad" : "good"}">${due > 0 ? L("Udhaar ","Due ") + rs(due) : L("Naqd","Paid")}</span></div>
   <button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`;
 }
@@ -707,11 +707,15 @@ const forms = {
   deliver: async (o, f) => {
     const c = cust(f.dataset.id), qty = num(o.qty), rate = num(o.rate);
     if (qty <= 0) throw new Error(L("Miqdaar likhein","Enter a quantity"));
+    const most = qty * rate + Math.max(0, (custStats()[c.id] || { bal:0 }).bal), pd = num(o.paid);
+    if (pd > most && f.dataset.ok !== String(pd)){ f.dataset.ok = String(pd); throw new Error(L(`Naqd ${rs(pd)} likha hai, jab ke bill aur purana baqaya mila kar ${rs(most)} banta hai. Ghalti hai to theek karein, sahi hai to dobara dabayein.`, `Cash ${rs(pd)} is more than bill plus old balance (${rs(most)}). Fix it, or tap again if correct.`)); }
     const data = { cust:c.id, type:c.data.type, qty, ret:num(o.ret), rate, amount:qty * rate, paid:num(o.paid), by:S.me.name || S.me.email };
     S.recs.push(await api.add(S.shop.id, "delivery", o.day || today(), data)); closeSheet(); render(); toast(L("Delivery likh di","Delivery saved"));
   },
   pay: async (o, f) => {
     if (num(o.amount) <= 0) throw new Error(L("Raqam likhein","Enter an amount"));
+    const due = Math.max(0, (custStats()[f.dataset.id] || { bal:0 }).bal), am = num(o.amount);
+    if (am > due && f.dataset.ok !== String(am)){ f.dataset.ok = String(am); throw new Error(L(`Raqam ${rs(am)} likhi hai, jab ke baqaya sirf ${rs(due)} hai. Ghalti hai to theek karein, sahi hai to dobara dabayein.`, `Amount ${rs(am)} is more than the balance due (${rs(due)}). Fix it, or tap again if correct.`)); }
     S.recs.push(await api.add(S.shop.id, "payment", o.day || today(), { cust:f.dataset.id, amount:num(o.amount), by:S.me.name || S.me.email }));
     closeSheet(); render(); sCust(f.dataset.id); toast(L("Wasooli likh di","Payment saved"));
   },
