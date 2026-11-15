@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ur-Latn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paani Supply Hisaab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ============ SETTING: yahan apne Supabase project ki 2 cheezein likhein ============ */
+const CFG = {
+  url: "https://thydhqdrapfswtvcxgwy.supabase.co",
+  key: "sb_publishable_U3NZr6tMY3wThA1xv0UOYQ_AMXgdeOY"
+};
+/* Jab tak yeh dono khali hain, app DEMO mein chalti hai (data save nahi hota). */
+</script>
+<style>
+/* Layout: phone-first single column, sticky header, bottom tab bar, bottom sheets for forms */
+:root{
+  --bg:#eef4f6; --card:#ffffff; --ink:#0d2b36; --mute:#5c7882; --line:#d5e2e6;
+  --accent:#0b7f96; --accent-ink:#ffffff; --soft:#dff0f4;
+  --good:#1f8a4c; --bad:#c2372d; --warn:#b7791f;
+  --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a1b21; --card:#12272f; --ink:#e4f1f4; --mute:#8fabb4; --line:#234049;
+    --accent:#35b4cc; --accent-ink:#05222a; --soft:#17353f;
+    --good:#4cc47f; --bad:#f0776d; --warn:#e0a94a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a1b21; --card:#12272f; --ink:#e4f1f4; --mute:#8fabb4; --line:#234049;
+  --accent:#35b4cc; --accent-ink:#05222a; --soft:#17353f;
+  --good:#4cc47f; --bad:#f0776d; --warn:#e0a94a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.4;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);padding:12px 16px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;font-weight:800;margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
+header small{display:block;font-weight:500;opacity:.85;font-size:12px}
+.hbtn{background:transparent;border:1.5px solid currentColor;color:inherit;border-radius:8px;padding:5px 9px;font-size:13px;font-weight:700;cursor:pointer}
+main{flex:1;padding:14px 16px 96px;display:flex;flex-direction:column;gap:14px}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--card);border-top:1px solid var(--line)}
+nav .in{max-width:560px;margin:0 auto;display:flex}
+nav button{flex:1;background:none;border:0;padding:9px 2px 11px;font-size:12px;font-weight:700;color:var(--mute);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-top:3px solid transparent}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--accent);border-top-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card h2{margin:0 0 10px;font-size:15px;font-weight:800}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tile b{display:block;font-size:22px;font-weight:800;overflow-wrap:anywhere}
+.tile span{font-size:12.5px;color:var(--mute);font-weight:600}
+.tile.good b{color:var(--good)} .tile.bad b{color:var(--bad)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:11px;padding:12px 16px;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none}
+.btn.wide{width:100%}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.btn.sm{padding:8px 11px;font-size:13px;border-radius:9px}
+.btn.danger{background:transparent;color:var(--bad);border:1.5px solid var(--bad)}
+.btn.wa{background:#1f8a4c;color:#fff}
+.btn:focus-visible,.hbtn:focus-visible,nav button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0;padding-bottom:0}
+.row .g{flex:1;min-width:0}
+.row .g b{display:block;font-weight:700;overflow-wrap:anywhere}
+.row .g small{color:var(--mute);font-size:12.5px;overflow-wrap:anywhere}
+.row .r{text-align:right;font-weight:800;white-space:nowrap}
+.tap{cursor:pointer}
+.pill{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:800;background:var(--soft);color:var(--ink)}
+.pill.bad{background:var(--bad);color:#fff} .pill.good{background:var(--good);color:#fff} .pill.warn{background:var(--warn);color:#fff}
+.mute{color:var(--mute)} .bad{color:var(--bad)} .good{color:var(--good)}
+label{display:block;font-size:13px;font-weight:700;color:var(--mute);margin-bottom:4px}
+input,select{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.f{display:flex;flex-direction:column;gap:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:9px;font-weight:700;color:var(--ink);font-size:15px;margin:0}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{background:var(--card);border:1.5px solid var(--line);border-radius:99px;padding:7px 13px;font-weight:700;font-size:13px;cursor:pointer;color:var(--mute)}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(4,20,26,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--card);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px 26px}
+.sheet .top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sheet .top h2{flex:1;margin:0;font-size:17px;font-weight:800}
+.x{background:var(--soft);border:0;border-radius:99px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer}
+#toast{position:fixed;left:16px;right:16px;bottom:84px;z-index:40;display:none;justify-content:center;pointer-events:none}
+#toast div{background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;max-width:520px}
+.demo{background:var(--warn);color:#fff;text-align:center;font-size:12.5px;font-weight:800;padding:5px 10px}
+.login{max-width:400px;margin:0 auto;width:100%;padding:40px 16px;display:flex;flex-direction:column;gap:16px}
+.logo{width:64px;height:64px;border-radius:18px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.logo svg{width:36px;height:36px}
+.login h1{margin:0;font-size:26px;font-weight:800;text-wrap:balance}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.total{display:flex;justify-content:space-between;font-weight:800;font-size:17px;padding-top:10px;border-top:2px solid var(--line);margin-top:6px}
+#print{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  #app,nav,.sheet,#toast{display:none!important}
+  #print{display:block;font-family:monospace;font-size:13px;padding:8px;max-width:300px}
+  #print h3{margin:0 0 4px;font-size:16px;text-align:center}
+  #print table{width:100%;border-collapse:collapse}
+  #print td{padding:2px 0;vertical-align:top}
+  #print td:last-child{text-align:right}
+  #print hr{border:0;border-top:1px dashed #000}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet"></div>
+<div id="toast"><div></div></div>
+<div id="print"></div>
+<script>
+"use strict";
+/* ================= helpers ================= */
+const DEMO = !CFG.url || !CFG.key;
+const $ = s => document.querySelector(s);
+const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const dstr = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today = () => dstr(new Date());
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const rs = n => "Rs " + Math.round(n || 0).toLocaleString("en-PK");
+const nice = d => { const [y,m,dd] = d.split("-"); return dd+"-"+m+"-"+y; };
+let LANG = "ru";
+try { LANG = localStorage.getItem("ps_lang") || "ru"; } catch(_){}
+const L = (ru, en) => LANG === "en" ? en : ru;
+function toast(msg){ const t=$("#toast"); t.firstElementChild.textContent=msg; t.style.display="flex"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",3200); }
+const IC = {
+  drop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.900 1.900 6.500 5.500"/><path d="M16 4.800a3.500 3.500 0 0 1 0 6.400M18 14.800c2 .7 3.200 2.400 3.500 5.200"/></svg>',
+  plant:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="6" height="18" rx="2"/><rect x="14" y="8" width="6" height="13" rx="2"/><path d="M10 12h4"/></svg>',
+  cash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.500"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.500"/><circle cx="12" cy="12" r="1.500"/><circle cx="19" cy="12" r="1.500"/></svg>'
+};
+
+/* ================= data layer ================= */
+let sb = null;
+if (!DEMO) sb = supabase.createClient(CFG.url, CFG.key);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "id"+Math.random().toString(36).slice(2)+Date.now());
+
+/* ---- demo data (sirf dikhane ke liye) ---- */
+const demo = { shops:[], profiles:[], recs:[], me:null };
+function seedDemo(){
+  const d = n => { const x = new Date(); x.setDate(x.getDate()-n); return dstr(x); };
+  demo.shops = [
+    {id:"s1", name:"Al-Madina Water", phone:"03001234567", modules:{bottle:true,tank:true,plant:true}, active:true},
+    {id:"s2", name:"Saaf Paani Supply", phone:"03111222333", modules:{bottle:true,tank:false,plant:false}, active:true},
+    {id:"s3", name:"Bismillah Tanki Service", phone:"03214445556", modules:{bottle:false,tank:true,plant:false}, active:false}
+  ];
+  demo.profiles = [
+    {id:"a", email:"admin@demo.pk", name:"Admin", role:"admin", shop_id:null, active:true},
+    {id:"o1", email:"malik@demo.pk", name:"Rashid", role:"owner", shop_id:"s1", active:true},
+    {id:"w1", email:"imran@demo.pk", name:"Imran", role:"worker", shop_id:"s1", active:true},
+    {id:"w2", email:"bilal@demo.pk", name:"Bilal", role:"worker", shop_id:"s1", active:true},
+    {id:"o2", email:"saaf@demo.pk", name:"Tariq", role:"owner", shop_id:"s2", active:true},
+    {id:"o3", email:"bismillah@demo.pk", name:"Naveed", role:"owner", shop_id:"s3", active:true}
+  ];
+  const R = (kind, day, data) => demo.recs.push({id:uid(), shop_id:"s1", kind, day, data, created_by:"o1"});
+  const cu = [
+    ["c1","Haji Aslam","03001112223","Gali 4, Makan 12","bottle",120],
+    ["c2","Sajid Kiryana Store","03004445556","Main Bazar","bottle",110],
+    ["c3","Baji Nasreen","03217778889","Gali 7, Makan 3","bottle",120],
+    ["c4","Al-Noor School","03331234567","Model Colony","tank",2.5],
+    ["c5","Chacha Hotel","03451239876","Chowk","tank",2.5],
+    ["c6","Usman Sahab","03009998887","Gali 2, Makan 20","bottle",130]
+  ];
+  cu.forEach(c => demo.recs.push({id:c[0], shop_id:"s1", kind:"customer", day:d(30), data:{name:c[1],phone:c[2],addr:c[3],type:c[4],rate:c[5],deposit:c[4]==="bottle"?1000:0}, created_by:"o1"}));
+  const del = (day,c,type,qty,ret,rate,paid,by) => R("delivery",day,{cust:c,type,qty,ret,rate,amount:qty*rate,paid,by});
+  del(d(3),"c1","bottle",2,0,120,240,"Imran"); del(d(3),"c2","bottle",5,0,110,0,"Imran"); del(d(3),"c4","tank",1000,0,2.5,2500,"Bilal");
+  del(d(2),"c3","bottle",1,0,120,0,"Imran"); del(d(2),"c5","tank",400,0,2.5,0,"Bilal"); del(d(2),"c6","bottle",2,0,130,260,"Imran");
+  del(d(1),"c1","bottle",2,2,120,0,"Imran"); del(d(1),"c2","bottle",5,5,110,550,"Imran"); del(d(1),"c4","tank",1000,0,2.5,0,"Bilal");
+  del(d(0),"c3","bottle",1,1,120,120,"Imran"); del(d(0),"c5","tank",400,0,2.5,1000,"Bilal"); del(d(0),"c2","bottle",4,5,110,0,"Imran");
+  R("payment",d(1),{cust:"c5",amount:500,by:"Rashid"});
+  R("expense",d(3),{cat:"Petrol",amount:1500,mod:"tank",note:""}); R("expense",d(1),{cat:"Petrol",amount:1200,mod:"bottle",note:""});
+  R("expense",d(2),{cat:"Bijli",amount:3000,mod:"plant",note:""}); R("expense",d(0),{cat:"Petrol",amount:1000,mod:"tank",note:""});
+  R("plant",d(1),{t:"prod",litres:3200,bottles:60}); R("plant",d(0),{t:"prod",litres:2800,bottles:52});
+  R("plant",d(75),{t:"maint",item:"Filter"}); R("plant",d(200),{t:"maint",item:"Membrane"});
+  R("sale",d(1),{qty:18,amount:900,note:""}); R("sale",d(0),{qty:22,amount:1100,note:""});
+}
+
+const api = {
+  async session(){
+    if (DEMO) return demo.me;
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return null;
+    const r = await sb.from("profiles").select("*").eq("id", data.session.user.id).maybeSingle();
+    if (r.error) throw r.error;
+    return r.data || { id:data.session.user.id, email:data.session.user.email, role:"none", active:true };
+  },
+  async login(email, pw){
+    if (DEMO){ demo.me = demo.profiles.find(p => p.email === email) || null; if(!demo.me) throw new Error("Demo ID nahi mili"); return; }
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw new Error(L("Email ya password ghalat hai","Wrong email or password"));
+  },
+  async logout(){ if (DEMO) demo.me = null; else await sb.auth.signOut(); },
+  async shop(id){
+    if (DEMO) return demo.shops.find(s => s.id === id) || null;
+    const r = await sb.from("shops").select("*").eq("id", id).maybeSingle(); if (r.error) throw r.error; return r.data;
+  },
+  async shops(){
+    if (DEMO) return { shops: demo.shops.slice(), profiles: demo.profiles.slice() };
+    const a = await sb.from("shops").select("*").order("created_at"); if (a.error) throw a.error;
+    const b = await sb.from("profiles").select("*"); if (b.error) throw b.error;
+    return { shops: a.data, profiles: b.data };
+  },
+  async newUser(email, pw){
+    if (DEMO) return uid();
+    const tmp = supabase.createClient(CFG.url, CFG.key, { auth:{ persistSession:false, autoRefreshToken:false, storageKey:"ps_tmp" } });
+    const { data, error } = await tmp.auth.signUp({ email, password: pw });
+    if (error) throw error;
+    if (!data.user || (data.user.identities && data.user.identities.length === 0)) throw new Error(L("Yeh email pehle se bani hui hai","This email already exists"));
+    return data.user.id;
+  },
+  async createShop(o){
+    if (DEMO){ const s={id:uid(),name:o.name,phone:o.phone,modules:o.modules,active:true}; demo.shops.push(s); demo.profiles.push({id:uid(),email:o.email,name:o.owner,role:"owner",shop_id:s.id,active:true}); return; }
+    const id = await this.newUser(o.email, o.pw);
+    const s = await sb.from("shops").insert({ name:o.name, phone:o.phone, modules:o.modules }).select().single(); if (s.error) throw s.error;
+    const p = await sb.from("profiles").insert({ id, email:o.email, name:o.owner, role:"owner", shop_id:s.data.id }); if (p.error) throw p.error;
+  },
+  async updateShop(id, patch){
+    if (DEMO){ Object.assign(demo.shops.find(s => s.id === id), patch); return; }
+    const r = await sb.from("shops").update(patch).eq("id", id); if (r.error) throw r.error;
+  },
+  async workers(shopId){
+    if (DEMO) return demo.profiles.filter(p => p.shop_id === shopId && p.role === "worker");
+    const r = await sb.from("profiles").select("*").eq("shop_id", shopId).eq("role","worker").order("created_at"); if (r.error) throw r.error; return r.data;
+  },
+  async createWorker(shopId, o){
+    if (DEMO){ demo.profiles.push({id:uid(),email:o.email,name:o.name,role:"worker",shop_id:shopId,active:true}); return; }
+    const id = await this.newUser(o.email, o.pw);
+    const p = await sb.from("profiles").insert({ id, email:o.email, name:o.name, role:"worker", shop_id:shopId }); if (p.error) throw p.error;
+  },
+  async setProfileActive(id, active){
+    if (DEMO){ demo.profiles.find(p => p.id === id).active = active; return; }
+    const r = await sb.from("profiles").update({ active }).eq("id", id); if (r.error) throw r.error;
+  },
+  async records(shopId){
+    if (DEMO) return demo.recs.filter(r => r.shop_id === shopId).map(r => ({...r}));
+    let out = [], from = 0;
+    for(;;){
+      const r = await sb.from("records").select("*").eq("shop_id", shopId).order("created_at").range(from, from+999);
+      if (r.error) throw r.error;
+      out = out.concat(r.data); if (r.data.length < 1000) break; from += 1000;
+    }
+    return out;
+  },
+  async add(shopId, kind, day, data){
+    if (DEMO){ const r={id:uid(),shop_id:shopId,kind,day,data,created_by:demo.me.id}; demo.recs.push(r); return {...r}; }
+    const r = await sb.from("records").insert({ shop_id:shopId, kind, day, data }).select().single(); if (r.error) throw r.error; return r.data;
+  },
+  async upd(id, data){
+    if (DEMO){ demo.recs.find(r => r.id === id).data = data; return; }
+    const r = await sb.from("records").update({ data }).eq("id", id); if (r.error) throw r.error;
+  },
+  async del(id){
+    if (DEMO){ demo.recs = demo.recs.filter(r => r.id !== id); return; }
+    const r = await sb.from("records").delete().eq("id", id).select(); if (r.error) throw r.error;
+    if (!r.data.length) throw new Error(L("Yeh delete karne ki ijazat nahi","Not allowed to delete this"));
+  }
+};
+
+/* ================= state ================= */
+const S = { me:null, shop:null, recs:[], tab:"aaj", period:"m", q:"", admin:null, workers:[], loading:true };
+const mods = () => (S.shop && S.shop.modules) || {};
+const isOwner = () => S.me && S.me.role === "owner";
+const supply = () => mods().bottle || mods().tank;
+const of = kind => S.recs.filter(r => r.kind === kind);
+const cust = id => S.recs.find(r => r.id === id);
+function custStats(){
+  const m = {};
+  const g = id => m[id] || (m[id] = { bal:0, held:0 });
+  for (const r of S.recs){
+    if (r.kind === "delivery"){ const s = g(r.data.cust); s.bal += num(r.data.amount) - num(r.data.paid); if (r.data.type === "bottle") s.held += num(r.data.qty) - num(r.data.ret); }
+    else if (r.kind === "payment") g(r.data.cust).bal -= num(r.data.amount);
+  }
+  return m;
+}
+function inPeriod(day){
+  const t = today();
+  if (S.period === "d") return day === t;
+  if (S.period === "m") return day.slice(0,7) === t.slice(0,7);
+  if (S.period === "pm"){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return day.slice(0,7) === dstr(d).slice(0,7); }
+  return true;
+}
+
+/* ================= boot ================= */
+async function boot(){
+  S.loading = true; render();
+  try{
+    S.me = await api.session();
+    if (S.me && S.me.role === "admin") S.admin = await api.shops();
+    else if (S.me && S.me.shop_id){
+      S.shop = await api.shop(S.me.shop_id);
+      if (S.shop && S.shop.active && S.me.active){
+        S.recs = await api.records(S.shop.id);
+        if (isOwner()) S.workers = await api.workers(S.shop.id);
+      }
+    }
+  }catch(err){ toast(err.message || String(err)); }
+  S.loading = false; S.tab = "aaj"; render();
+}
+
+/* ================= render ================= */
+function render(){
+  const app = $("#app");
+  const banner = DEMO ? `<div class="demo">${L("DEMO: yeh sirf namoona hai, data save nahi hota","DEMO: sample only, nothing is saved")}</div>` : "";
+  if (S.loading){ app.innerHTML = banner + `<main><p class="mute">${L("Khul raha hai...","Loading...")}</p></main>`; return; }
+  if (!S.me){ app.innerHTML = banner + vLogin(); return; }
+  const langBtn = `<button class="hbtn" data-act="lang">${LANG === "en" ? "Roman" : "English"}</button>`;
+  if (S.me.role === "admin"){
+    app.innerHTML = banner + `<header><h1>${L("Admin Panel","Admin Panel")}<small>${e(S.me.email)}</small></h1>${langBtn}<button class="hbtn" data-act="logout">${L("Bahar","Logout")}</button></header><main>${vAdmin()}</main>`;
+    return;
+  }
+  const blocked = !S.shop || !S.shop.active || !S.me.active || S.me.role === "none";
+  if (blocked){
+    app.innerHTML = banner + `<header><h1>${e(S.shop ? S.shop.name : "Paani Supply")}</h1>${langBtn}<button class="hbtn" data-act="logout">${L("Bahar","Logout")}</button></header>
+    <main><div class="card"><h2>${L("Account band hai","Account is off")}</h2><p class="mute">${L("Yeh account abhi chalu nahi. Admin se rabta karein.","This account is not active. Please contact the admin.")}</p></div></main>`;
+    return;
+  }
+  const tabs = [["aaj",L("Aaj","Today"),IC.home]];
+  if (supply()) tabs.push(["cust",L("Grahak","Customers"),IC.users]);
+  if (isOwner() && mods().plant) tabs.push(["plant","Plant",IC.plant]);
+  if (isOwner()) tabs.push(["exp",L("Kharcha","Expense"),IC.cash],["his",L("Hisaab","Accounts"),IC.chart]);
+  tabs.push(["more",L("Aur","More"),IC.more]);
+  if (!tabs.some(t => t[0] === S.tab)) S.tab = "aaj";
+  const view = {aaj:vToday, cust:vCust, plant:vPlant, exp:vExp, his:vHisaab, more:vMore}[S.tab]();
+  app.innerHTML = banner + `<header><h1>${e(S.shop.name)}<small>${e(S.me.name || S.me.email)} · ${isOwner() ? L("Malik","Owner") : L("Delivery wala","Delivery staff")}</small></h1>${langBtn}</header>
+  <main>${view}</main>
+  <nav><div class="in">${tabs.map(t => `<button class="${S.tab===t[0]?"on":""}" data-act="tab" data-v="${t[0]}">${t[2]}<span>${t[1]}</span></button>`).join("")}</div></nav>`;
+}
+
+function vLogin(){
+  return `<div class="login">
+    <div class="logo">${IC.drop}</div>
+    <div><h1>Paani Supply Hisaab</h1><p class="mute">${L("Botal, tanki aur RO plant ka poora hisaab","Bottle, tanker and RO plant accounts in one place")}</p></div>
+    ${DEMO ? `<div class="card f"><h2>${L("Demo dekhein","Try the demo")}</h2>
+      <button class="btn wide" data-act="demo" data-v="malik@demo.pk">${L("Malik ban kar dekhein (teeno kaam)","View as owner (all three)")}</button>
+      <button class="btn wide ghost" data-act="demo" data-v="saaf@demo.pk">${L("Sirf botal wala malik","Bottle-only owner")}</button>
+      <button class="btn wide ghost" data-act="demo" data-v="imran@demo.pk">${L("Delivery wala ladka","Delivery staff")}</button>
+      <button class="btn wide ghost" data-act="demo" data-v="admin@demo.pk">Admin</button></div>`
+    : `<form class="card f" data-form="login">
+      <div><label for="lg_e">Email</label><input id="lg_e" name="email" type="email" autocomplete="username" required></div>
+      <div><label for="lg_p">Password</label><input id="lg_p" name="pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn wide">${L("Andar jayein","Log in")}</button></form>`}
+    <button class="btn ghost sm" data-act="lang" style="align-self:flex-start">${LANG === "en" ? "Roman Urdu" : "English"}</button>
+  </div>`;
+}
+
+/* ---------- Admin ---------- */
+const MODN = () => ({ bottle:L("Botal supply","Bottle supply"), tank:L("Tanki supply","Tanker supply"), plant:L("RO plant","RO plant") });
+function vAdmin(){
+  const a = S.admin || { shops:[], profiles:[] }, N = MODN();
+  const cards = a.shops.map(s => {
+    const own = a.profiles.find(p => p.shop_id === s.id && p.role === "owner");
+    const wk = a.profiles.filter(p => p.shop_id === s.id && p.role === "worker").length;
+    return `<div class="card">
+      <div class="row" style="padding-top:0"><div class="g"><b>${e(s.name)}</b><small>${e(own ? own.email : "-")} · ${e(s.phone)} · ${wk} ${L("ladkay","staff")}</small></div>
+      <span class="pill ${s.active ? "good" : "bad"}">${s.active ? L("Chalu","On") : L("Band","Off")}</span></div>
+      <div class="f" style="margin-top:10px">
+        ${["bottle","tank","plant"].map(k => `<label class="chk"><input type="checkbox" id="m_${s.id}_${k}" data-act="mod" data-id="${s.id}" data-k="${k}" ${s.modules[k] ? "checked" : ""}>${N[k]}</label>`).join("")}
+        <button class="btn sm ${s.active ? "danger" : ""}" data-act="shopActive" data-id="${s.id}" style="align-self:flex-start">${s.active ? L("Account band karein","Turn account off") : L("Account chalu karein","Turn account on")}</button>
+      </div></div>`;
+  }).join("");
+  return `<div class="tiles"><div class="tile"><b>${a.shops.length}</b><span>${L("Kul clients","Total clients")}</span></div><div class="tile good"><b>${a.shops.filter(s => s.active).length}</b><span>${L("Chalu","Active")}</span></div></div>
+  <button class="btn wide" data-act="newShop">+ ${L("Naya client banayein","Add new client")}</button>
+  ${cards || `<p class="mute">${L("Abhi koi client nahi. Upar wale button se pehla client banayein.","No clients yet. Use the button above to add the first one.")}</p>`}`;
+}
+function fNewShop(){
+  const N = MODN();
+  sheet(L("Naya client","New client"), `<form class="f" data-form="newShop">
+    <div><label for="ns_n">${L("Dukaan / karobar ka naam","Business name")}</label><input id="ns_n" name="name" required></div>
+    <div class="two"><div><label for="ns_o">${L("Malik ka naam","Owner name")}</label><input id="ns_o" name="owner" required></div>
+    <div><label for="ns_ph">${L("Phone","Phone")}</label><input id="ns_ph" name="phone" inputmode="tel"></div></div>
+    <div><label for="ns_e">${L("Login email (Gmail)","Login email")}</label><input id="ns_e" name="email" type="email" required autocomplete="off"></div>
+    <div><label for="ns_p">${L("Password (kam az kam 6 harf)","Password (min 6 characters)")}</label><input id="ns_p" name="pw" minlength="6" required autocomplete="off"></div>
+    <div class="f"><label>${L("Is client ka kaam","This client's work")}</label>
+    ${["bottle","tank","plant"].map((k,i) => `<label class="chk"><input type="checkbox" id="ns_m${i}" name="m_${k}" ${k === "bottle" ? "checked" : ""}>${N[k]}</label>`).join("")}</div>
+    <button class="btn wide">${L("Client banayein","Create client")}</button></form>`);
+}
+
+/* ---------- Aaj ---------- */
+function vToday(){
+  const t = today(), m = mods();
+  const dl = of("delivery").filter(r => r.day === t && (isOwner() || true));
+  const bot = dl.filter(r => r.data.type === "bottle"), tk = dl.filter(r => r.data.type === "tank");
+  const sum = (a, f) => a.reduce((x, r) => x + num(f(r)), 0);
+  const pays = of("payment").filter(r => r.day === t);
+  const cash = sum(dl, r => r.data.paid) + sum(pays, r => r.data.amount);
+  const credit = sum(dl, r => num(r.data.amount) - num(r.data.paid));
+  let tiles = "";
+  if (m.bottle) tiles += `<div class="tile"><b>${sum(bot, r => r.data.qty)}</b><span>${L("Botal di","Bottles delivered")}</span></div><div class="tile"><b>${sum(bot, r => r.data.ret)}</b><span>${L("Khali wapas","Empties back")}</span></div>`;
+  if (m.tank) tiles += `<div class="tile"><b>${sum(tk, r => r.data.qty).toLocaleString()}</b><span>${L("Litre tanki supply","Litres by tanker")}</span></div><div class="tile"><b>${tk.length}</b><span>${L("Tanki deliveries","Tanker drops")}</span></div>`;
+  if (supply()) tiles += `<div class="tile good"><b>${rs(cash)}</b><span>${L("Aaj naqd mila","Cash today")}</span></div><div class="tile bad"><b>${rs(credit)}</b><span>${L("Aaj ka udhaar","Credit today")}</span></div>`;
+  if (m.plant && isOwner()){
+    const pr = of("plant").filter(r => r.day === t && r.data.t === "prod"), sl = of("sale").filter(r => r.day === t);
+    tiles += `<div class="tile"><b>${sum(pr, r => r.data.litres).toLocaleString()}</b><span>${L("Litre pani bana","Litres produced")}</span></div><div class="tile good"><b>${rs(sum(sl, r => r.data.amount))}</b><span>${L("Plant counter bikri","Plant counter sales")}</span></div>`;
+  }
+  const rows = dl.slice().reverse().map(r => rowDelivery(r, true)).join("");
+  return `<div class="mute" style="font-weight:700">${nice(t)}</div>
+  <div class="tiles">${tiles}</div>
+  ${supply() ? `<button class="btn wide" data-act="pick">+ ${L("Nayi delivery","New delivery")}</button>
+  <div class="card"><h2>${L("Aaj ki deliveries","Today's deliveries")}</h2>${rows || `<p class="mute">${L("Aaj abhi koi delivery nahi likhi.","No deliveries recorded today.")}</p>`}</div>` : ""}`;
+}
+function rowDelivery(r, showName){
+  const c = cust(r.data.cust), d = r.data;
+  const what = d.type === "tank" ? `${num(d.qty).toLocaleString()} ${L("litre","litres")}` : `${d.qty} ${L("botal","bottles")}${num(d.ret) ? ` · ${d.ret} ${L("khali wapas","empties")}` : ""}`;
+  const due = num(d.amount) - num(d.paid);
+  return `<div class="row"><div class="g"><b>${showName ? e(c ? c.data.name : "?") : nice(r.day)}</b><small>${what}${d.by ? " · " + e(d.by) : ""}${showName ? "" : ""}</small></div>
+  <div class="r">${rs(d.amount)}<br><span class="pill ${due > 0 ? "bad" : "good"}">${due > 0 ? L("Udhaar ","Due ") + rs(due) : L("Naqd","Paid")}</span></div>
+  <button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`;
+}
+
+/* ---------- Grahak ---------- */
+function vCust(){
+  const st = custStats(), q = S.q.trim().toLowerCase();
+  let list = of("customer").filter(c => !q || (c.data.name + " " + c.data.phone + " " + c.data.addr).toLowerCase().includes(q));
+  list.sort((a, b) => a.data.name.localeCompare(b.data.name));
+  const totalDue = of("customer").reduce((x, c) => x + Math.max(0, (st[c.id] || {}).bal || 0), 0);
+  const rows = list.map(c => {
+    const s = st[c.id] || { bal:0, held:0 };
+    return `<div class="row tap" data-act="cust" data-id="${c.id}"><div class="g"><b>${e(c.data.name)}</b><small>${e(c.data.addr || c.data.phone || "")}${c.data.type === "bottle" ? ` · ${s.held} ${L("botal us ke paas","bottles held")}` : ` · ${L("tanki","tanker")}`}</small></div>
+    <div class="r ${s.bal > 0 ? "bad" : ""}">${s.bal > 0 ? rs(s.bal) : `<span class="pill good">${L("Saaf","Clear")}</span>`}</div></div>`;
+  }).join("");
+  return `<div class="tiles"><div class="tile"><b>${of("customer").length}</b><span>${L("Kul grahak","Customers")}</span></div><div class="tile bad"><b>${rs(totalDue)}</b><span>${L("Kul udhaar","Total credit")}</span></div></div>
+  <input id="q" type="search" placeholder="${L("Naam, phone ya gali se dhoondein","Search name, phone or street")}" value="${e(S.q)}" aria-label="Search">
+  <button class="btn wide" data-act="newCust">+ ${L("Naya grahak","New customer")}</button>
+  <div class="card" id="custList">${rows || `<p class="mute">${L("Koi grahak nahi mila.","No customers found.")}</p>`}</div>`;
+}
+function fCust(c){
+  const d = c ? c.data : { type: mods().bottle ? "bottle" : "tank" }, m = mods();
+  const typeSel = (m.bottle && m.tank) ? `<div><label for="cu_t">${L("Kaam","Type")}</label><select id="cu_t" name="type"><option value="bottle" ${d.type === "bottle" ? "selected" : ""}>${L("Botal (19L)","Bottle (19L)")}</option><option value="tank" ${d.type === "tank" ? "selected" : ""}>${L("Tanki (litre)","Tanker (litres)")}</option></select></div>` : `<input type="hidden" name="type" value="${m.bottle ? "bottle" : "tank"}">`;
+  sheet(c ? L("Grahak badlein","Edit customer") : L("Naya grahak","New customer"), `<form class="f" data-form="cust" data-id="${c ? c.id : ""}">
+    <div><label for="cu_n">${L("Naam","Name")}</label><input id="cu_n" name="name" value="${e(d.name)}" required></div>
+    <div><label for="cu_p">${L("Phone (WhatsApp)","Phone (WhatsApp)")}</label><input id="cu_p" name="phone" inputmode="tel" value="${e(d.phone)}"></div>
+    <div><label for="cu_a">${L("Pata / gali","Address")}</label><input id="cu_a" name="addr" value="${e(d.addr)}"></div>
+    ${typeSel}
+    <div class="two"><div><label for="cu_r">${L("Rate (fi botal ya fi litre)","Rate (per bottle or litre)")}</label><input id="cu_r" name="rate" inputmode="decimal" value="${e(d.rate ?? "")}" required></div>
+    <div><label for="cu_d">${L("Security (botal)","Deposit")}</label><input id="cu_d" name="deposit" inputmode="decimal" value="${e(d.deposit ?? "")}"></div></div>
+    <button class="btn wide">${L("Mehfooz karein","Save")}</button></form>`);
+}
+function sCust(id){
+  const c = cust(id); if (!c) return;
+  const s = custStats()[id] || { bal:0, held:0 };
+  const hist = S.recs.filter(r => (r.kind === "delivery" || r.kind === "payment") && r.data.cust === id).slice().reverse().slice(0, 40);
+  const rows = hist.map(r => r.kind === "delivery" ? rowDelivery(r, false) :
+    `<div class="row"><div class="g"><b>${nice(r.day)}</b><small>${L("Paisa wasool","Payment received")}${r.data.by ? " · " + e(r.data.by) : ""}</small></div><div class="r good">${rs(r.data.amount)}</div><button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`).join("");
+  sheet(c.data.name, `<p class="mute" style="margin-top:-6px">${e(c.data.addr || "")} ${c.data.phone ? "· " + e(c.data.phone) : ""}<br>${L("Rate","Rate")}: ${rs(c.data.rate)} ${c.data.type === "tank" ? L("fi litre","per litre") : L("fi botal","per bottle")}</p>
+    <div class="tiles"><div class="tile ${s.bal > 0 ? "bad" : "good"}"><b>${rs(s.bal)}</b><span>${L("Baqaya (udhaar)","Balance due")}</span></div>
+    ${c.data.type === "bottle" ? `<div class="tile"><b>${s.held}</b><span>${L("Botal us ke paas","Bottles held")}</span></div>` : `<div class="tile"><b>${rs(c.data.deposit)}</b><span>${L("Security","Deposit")}</span></div>`}</div>
+    <div class="acts" style="margin:12px 0">
+      <button class="btn sm" data-act="deliver" data-id="${id}">+ ${L("Delivery","Delivery")}</button>
+      <button class="btn sm ghost" data-act="pay" data-id="${id}">${L("Paisa wasool","Take payment")}</button>
+      ${c.data.phone ? `<a class="btn sm wa" target="_blank" rel="noopener" href="${waLink(c, s)}">WhatsApp</a>` : ""}
+      <button class="btn sm ghost" data-act="print" data-id="${id}">${L("Parchi","Print slip")}</button>
+      <button class="btn sm ghost" data-act="editCust" data-id="${id}">${L("Badlein","Edit")}</button>
+    </div>
+    <div class="card"><h2>${L("Purana hisaab","History")}</h2>${rows || `<p class="mute">${L("Abhi koi entry nahi.","No entries yet.")}</p>`}</div>`);
+}
+function waNum(p){ let n = String(p || "").replace(/\D/g, ""); if (n.startsWith("0")) n = "92" + n.slice(1); return n; }
+function waLink(c, s){
+  const lines = [`*${S.shop.name}*`, `${L("Assalam o alaikum","Hello")} ${c.data.name},`, `${L("Aap ka baqaya","Your balance due")}: ${rs(s.bal)}`];
+  if (c.data.type === "bottle") lines.push(`${L("Aap ke paas hamari botalen","Our bottles with you")}: ${s.held}`);
+  lines.push(`${L("Tareekh","Date")}: ${nice(today())}`, L("Shukriya","Thank you"));
+  return "https://wa.me/" + waNum(c.data.phone) + "?text=" + encodeURIComponent(lines.join("\n"));
+}
+function printSlip(id){
+  const c = cust(id), s = custStats()[id] || { bal:0, held:0 };
+  const hist = S.recs.filter(r => (r.kind === "delivery" || r.kind === "payment") && r.data.cust === id).slice(-12);
+  $("#print").innerHTML = `<h3>${e(S.shop.name)}</h3><div style="text-align:center">${e(S.shop.phone || "")}</div><hr>
+  <div>${e(c.data.name)}</div><div>${e(c.data.addr || "")}</div><div>${nice(today())}</div><hr>
+  <table>${hist.map(r => r.kind === "delivery" ? `<tr><td>${nice(r.day).slice(0,5)} ${r.data.type === "tank" ? r.data.qty + "L" : r.data.qty + " botal"}</td><td>${Math.round(r.data.amount)}</td></tr>` : `<tr><td>${nice(r.day).slice(0,5)} wasool</td><td>-${Math.round(r.data.amount)}</td></tr>`).join("")}</table><hr>
+  <table><tr><td><b>Baqaya</b></td><td><b>${rs(s.bal)}</b></td></tr>${c.data.type === "bottle" ? `<tr><td>Botal aap ke paas</td><td>${s.held}</td></tr>` : ""}</table><hr><div style="text-align:center">Shukriya</div>`;
+  try { window.print(); } catch(_){ toast(L("Yahan print nahi chalta","Printing is not available here")); }
+}
+function fPick(){
+  sheet(L("Grahak chunein","Choose customer"), `<input id="pq" type="search" placeholder="${L("Naam ya gali likhein","Type name or street")}" aria-label="Search"><div id="pickList" style="margin-top:8px">${pickRows("")}</div>`);
+}
+function pickRows(q){
+  q = q.trim().toLowerCase();
+  const l = of("customer").filter(c => !q || (c.data.name + " " + c.data.addr).toLowerCase().includes(q)).sort((a, b) => a.data.name.localeCompare(b.data.name));
+  return l.map(c => `<div class="row tap" data-act="deliver" data-id="${c.id}"><div class="g"><b>${e(c.data.name)}</b><small>${e(c.data.addr || "")}</small></div><span class="pill">${c.data.type === "tank" ? L("Tanki","Tanker") : L("Botal","Bottle")}</span></div>`).join("") || `<p class="mute">${L("Koi grahak nahi. Pehle Grahak mein naya grahak banayein.","No customers. Add one in Customers first.")}</p>`;
+}
+function fDeliver(id){
+  const c = cust(id); if (!c) return; const tank = c.data.type === "tank";
+  sheet(`${L("Delivery","Delivery")}: ${c.data.name}`, `<form class="f" data-form="deliver" data-id="${id}">
+    <div class="two"><div><label for="dv_q">${tank ? L("Kitne litre","Litres") : L("Botal di","Bottles given")}</label><input id="dv_q" name="qty" inputmode="decimal" required value="${tank ? "" : "1"}"></div>
+    ${tank ? `<div><label for="dv_r">${L("Rate fi litre","Rate per litre")}</label><input id="dv_r" name="rate" inputmode="decimal" value="${e(c.data.rate)}" required></div>`
+           : `<div><label for="dv_ret">${L("Khali wapas li","Empties taken back")}</label><input id="dv_ret" name="ret" inputmode="numeric" value="0"></div>`}</div>
+    ${tank ? "" : `<div><label for="dv_r">${L("Rate fi botal","Rate per bottle")}</label><input id="dv_r" name="rate" inputmode="decimal" value="${e(c.data.rate)}" required></div>`}
+    <div class="total"><span>${L("Kul raqam","Total")}</span><span id="dv_amt">${rs(tank ? 0 : num(c.data.rate))}</span></div>
+    <div><label for="dv_p">${L("Abhi naqd mila (baqi udhaar)","Cash received now (rest is credit)")}</label><input id="dv_p" name="paid" inputmode="decimal" value="0"></div>
+    <button type="button" class="btn ghost sm" data-act="fullpaid" style="align-self:flex-start">${L("Poora naqd mila","Paid in full")}</button>
+    <div><label for="dv_d">${L("Tareekh","Date")}</label><input id="dv_d" name="day" type="date" value="${today()}"></div>
+    <button class="btn wide">${L("Delivery likhein","Save delivery")}</button></form>`);
+}
+function fPay(id){
+  const c = cust(id), s = custStats()[id] || { bal:0 };
+  sheet(`${L("Paisa wasool","Take payment")}: ${c.data.name}`, `<form class="f" data-form="pay" data-id="${id}">
+    <p class="mute" style="margin:0">${L("Baqaya","Balance due")}: <b class="bad">${rs(s.bal)}</b></p>
+    <div><label for="py_a">${L("Kitni raqam mili","Amount received")}</label><input id="py_a" name="amount" inputmode="decimal" required value="${s.bal > 0 ? Math.round(s.bal) : ""}"></div>
+    <div><label for="py_d">${L("Tareekh","Date")}</label><input id="py_d" name="day" type="date" value="${today()}"></div>
+    <button class="btn wide">${L("Wasooli likhein","Save payment")}</button></form>`);
+}
+
+/* ---------- Plant ---------- */
+function vPlant(){
+  const pl = of("plant"), last = item => { const a = pl.filter(r => r.data.t === "maint" && r.data.item === item).map(r => r.day).sort(); return a[a.length - 1]; };
+  const days = d => Math.floor((new Date(today()) - new Date(d)) / 864e5);
+  const rem = (item, label, lim) => { const d = last(item); if (!d) return `<div class="row"><div class="g"><b>${label}</b><small>${L("Abhi tak koi tabdeeli nahi likhi","No change recorded yet")}</small></div><span class="pill warn">?</span></div>`;
+    const n = days(d), st = n >= lim ? "bad" : n >= lim * 0.8 ? "warn" : "good";
+    return `<div class="row"><div class="g"><b>${label}</b><small>${L("Aakhri tabdeeli","Last changed")}: ${nice(d)} · ${L("har","every")} ${lim} ${L("din","days")}</small></div><span class="pill ${st}">${n} ${L("din","days")}</span></div>`; };
+  const prod = pl.filter(r => r.data.t === "prod").slice().reverse().slice(0, 10).map(r => `<div class="row"><div class="g"><b>${nice(r.day)}</b><small>${num(r.data.bottles)} ${L("botal bhari","bottles filled")}</small></div><div class="r">${num(r.data.litres).toLocaleString()} L</div><button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`).join("");
+  const sales = of("sale").slice().reverse().slice(0, 10).map(r => `<div class="row"><div class="g"><b>${nice(r.day)}</b><small>${num(r.data.qty)} ${L("botal counter par bhari","bottles filled at counter")}</small></div><div class="r good">${rs(r.data.amount)}</div><button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`).join("");
+  return `<div class="card"><h2>${L("Filter aur membrane ki yaad-dehani","Filter and membrane reminders")}</h2>${rem("Filter", L("Filter (sediment / carbon)","Filters (sediment / carbon)"), 90)}${rem("Membrane", "RO Membrane", 365)}
+    <div class="acts" style="margin-top:12px"><button class="btn sm ghost" data-act="maint" data-v="Filter">${L("Filter aaj badla","Filter changed today")}</button><button class="btn sm ghost" data-act="maint" data-v="Membrane">${L("Membrane aaj badli","Membrane changed today")}</button></div></div>
+  <div class="acts"><button class="btn" data-act="newProd">+ ${L("Aaj ka pani","Today's production")}</button><button class="btn ghost" data-act="newSale">+ ${L("Counter bikri","Counter sale")}</button></div>
+  <div class="card"><h2>${L("Pani kitna bana","Production log")}</h2>${prod || `<p class="mute">${L("Abhi kuch nahi likha.","Nothing recorded yet.")}</p>`}</div>
+  <div class="card"><h2>${L("Counter par bikri","Counter sales")}</h2>${sales || `<p class="mute">${L("Abhi kuch nahi likha.","Nothing recorded yet.")}</p>`}</div>`;
+}
+function fProd(){ sheet(L("Aaj ka pani","Today's production"), `<form class="f" data-form="prod">
+  <div class="two"><div><label for="pr_l">${L("Litre pani bana","Litres produced")}</label><input id="pr_l" name="litres" inputmode="decimal" required></div><div><label for="pr_b">${L("Botal bhari","Bottles filled")}</label><input id="pr_b" name="bottles" inputmode="numeric" value="0"></div></div>
+  <div><label for="pr_d">${L("Tareekh","Date")}</label><input id="pr_d" name="day" type="date" value="${today()}"></div><button class="btn wide">${L("Mehfooz karein","Save")}</button></form>`); }
+function fSale(){ sheet(L("Counter bikri","Counter sale"), `<form class="f" data-form="sale">
+  <div class="two"><div><label for="sl_q">${L("Kitni botal bhari","Bottles filled")}</label><input id="sl_q" name="qty" inputmode="numeric" required></div><div><label for="sl_a">${L("Kul raqam","Amount")}</label><input id="sl_a" name="amount" inputmode="decimal" required></div></div>
+  <div><label for="sl_d">${L("Tareekh","Date")}</label><input id="sl_d" name="day" type="date" value="${today()}"></div><button class="btn wide">${L("Mehfooz karein","Save")}</button></form>`); }
+
+/* ---------- Kharcha ---------- */
+function vExp(){
+  const list = of("expense").slice().reverse().slice(0, 60), N = MODN();
+  const mon = of("expense").filter(r => r.day.slice(0,7) === today().slice(0,7)).reduce((x, r) => x + num(r.data.amount), 0);
+  const rows = list.map(r => `<div class="row"><div class="g"><b>${e(r.data.cat)}</b><small>${nice(r.day)} · ${e(N[r.data.mod] || L("Sab ka mushtarka","Shared"))}${r.data.note ? " · " + e(r.data.note) : ""}</small></div><div class="r bad">${rs(r.data.amount)}</div><button class="btn sm danger" data-act="del" data-id="${r.id}" aria-label="Delete">✕</button></div>`).join("");
+  return `<div class="tiles"><div class="tile bad"><b>${rs(mon)}</b><span>${L("Is mahine ka kharcha","Expenses this month")}</span></div><div class="tile"><b>${of("expense").filter(r => r.day === today()).length}</b><span>${L("Aaj ki entries","Entries today")}</span></div></div>
+  <button class="btn wide" data-act="newExp">+ ${L("Naya kharcha","New expense")}</button>
+  <div class="card"><h2>${L("Kharche","Expenses")}</h2>${rows || `<p class="mute">${L("Abhi koi kharcha nahi likha.","No expenses recorded yet.")}</p>`}</div>`;
+}
+function fExp(){
+  const m = mods(), N = MODN(), cats = ["Petrol","Gaari maintenance","Tankhwah","Bijli","Filter / Membrane","Botal / Cap / Seal","Pani (plant se khareeda)","Kiraya","Aur"];
+  const mo = ["bottle","tank","plant"].filter(k => m[k]);
+  sheet(L("Naya kharcha","New expense"), `<form class="f" data-form="exp">
+    <div><label for="ex_c">${L("Kis cheez ka","Category")}</label><select id="ex_c" name="cat">${cats.map(c => `<option>${c}</option>`).join("")}</select></div>
+    <div><label for="ex_a">${L("Raqam","Amount")}</label><input id="ex_a" name="amount" inputmode="decimal" required></div>
+    ${mo.length > 1 ? `<div><label for="ex_m">${L("Kis kaam ka kharcha","For which work")}</label><select id="ex_m" name="mod">${mo.map(k => `<option value="${k}">${N[k]}</option>`).join("")}<option value="all">${L("Sab ka mushtarka","Shared")}</option></select></div>` : `<input type="hidden" name="mod" value="${mo[0] || "all"}">`}
+    <div><label for="ex_n">${L("Note (zaroori nahi)","Note (optional)")}</label><input id="ex_n" name="note"></div>
+    <div><label for="ex_d">${L("Tareekh","Date")}</label><input id="ex_d" name="day" type="date" value="${today()}"></div>
+    <button class="btn wide">${L("Mehfooz karein","Save")}</button></form>`);
+}
+
+/* ---------- Hisaab ---------- */
+function vHisaab(){
+  const m = mods(), N = MODN(), P = [["d",L("Aaj","Today")],["m",L("Is mahine","This month")],["pm",L("Pichla mahina","Last month")],["all",L("Sab","All")]];
+  const dl = of("delivery").filter(r => inPeriod(r.day)), ex = of("expense").filter(r => inPeriod(r.day)), sl = of("sale").filter(r => inPeriod(r.day)), py = of("payment").filter(r => inPeriod(r.day));
+  const sum = (a, f) => a.reduce((x, r) => x + num(f(r)), 0);
+  const inc = { bottle: sum(dl.filter(r => r.data.type === "bottle"), r => r.data.amount), tank: sum(dl.filter(r => r.data.type === "tank"), r => r.data.amount), plant: sum(sl, r => r.data.amount) };
+  const exp = { bottle:0, tank:0, plant:0, all:0 }; ex.forEach(r => exp[r.data.mod in exp ? r.data.mod : "all"] += num(r.data.amount));
+  const act = ["bottle","tank","plant"].filter(k => m[k]);
+  const tInc = act.reduce((x, k) => x + inc[k], 0), tExp = act.reduce((x, k) => x + exp[k], 0) + exp.all, profit = tInc - tExp;
+  const cash = sum(dl, r => r.data.paid) + sum(py, r => r.data.amount) + (m.plant ? inc.plant : 0);
+  const st = custStats(), due = of("customer").map(c => [c, (st[c.id] || {}).bal || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  const totalDue = due.reduce((x, d) => x + d[1], 0);
+  const modRows = act.map(k => `<div class="row"><div class="g"><b>${N[k]}</b><small>${L("Bikri","Sales")} ${rs(inc[k])} · ${L("Kharcha","Expense")} ${rs(exp[k])}</small></div><div class="r ${inc[k] - exp[k] < 0 ? "bad" : "good"}">${rs(inc[k] - exp[k])}</div></div>`).join("") +
+    (exp.all ? `<div class="row"><div class="g"><b>${L("Mushtarka kharcha","Shared expense")}</b></div><div class="r bad">-${rs(exp.all)}</div></div>` : "");
+  const by = {}; dl.forEach(r => { const k = r.data.by || "-"; (by[k] = by[k] || { n:0, cash:0, amt:0 }); by[k].n++; by[k].cash += num(r.data.paid); by[k].amt += num(r.data.amount); });
+  py.forEach(r => { const k = r.data.by || "-"; (by[k] = by[k] || { n:0, cash:0, amt:0 }); by[k].cash += num(r.data.amount); });
+  const wr = Object.keys(by).map(k => `<div class="row"><div class="g"><b>${e(k)}</b><small>${by[k].n} ${L("deliveries","deliveries")} · ${L("maal","goods")} ${rs(by[k].amt)}</small></div><div class="r good">${rs(by[k].cash)}<br><small class="mute">${L("wasool","collected")}</small></div></div>`).join("");
+  return `<div class="seg">${P.map(p => `<button class="${S.period === p[0] ? "on" : ""}" data-act="period" data-v="${p[0]}">${p[1]}</button>`).join("")}</div>
+  <div class="tiles"><div class="tile"><b>${rs(tInc)}</b><span>${L("Kul bikri","Total sales")}</span></div><div class="tile bad"><b>${rs(tExp)}</b><span>${L("Kul kharcha","Total expense")}</span></div>
+  <div class="tile ${profit < 0 ? "bad" : "good"}"><b>${rs(profit)}</b><span>${profit < 0 ? L("Nuqsan","Loss") : L("Munafa","Profit")}</span></div><div class="tile good"><b>${rs(cash)}</b><span>${L("Naqd haath mein aaya","Cash received")}</span></div></div>
+  ${act.length > 1 || exp.all ? `<div class="card"><h2>${L("Har kaam ka alag munafa","Profit by work")}</h2>${modRows}</div>` : ""}
+  ${supply() ? `<div class="card"><h2>${L("Kis ne kitna kaam kiya","Work by staff")}</h2>${wr || `<p class="mute">${L("Is muddat mein koi delivery nahi.","No deliveries in this period.")}</p>`}</div>
+  <div class="card"><h2>${L("Udhaar walay grahak","Customers with credit")} · ${rs(totalDue)}</h2>${due.slice(0, 30).map(x => `<div class="row tap" data-act="cust" data-id="${x[0].id}"><div class="g"><b>${e(x[0].data.name)}</b><small>${e(x[0].data.addr || "")}</small></div><div class="r bad">${rs(x[1])}</div></div>`).join("") || `<p class="mute">${L("Kisi par udhaar nahi.","Nobody owes anything.")}</p>`}</div>` : ""}`;
+}
+
+/* ---------- Aur ---------- */
+function vMore(){
+  const N = MODN(), act = ["bottle","tank","plant"].filter(k => mods()[k]).map(k => `<span class="pill">${N[k]}</span>`).join(" ");
+  const wk = isOwner() ? `<div class="card"><h2>${L("Delivery walay ladkay","Delivery staff")}</h2>
+    ${S.workers.map(w => `<div class="row"><div class="g"><b>${e(w.name)}</b><small>${e(w.email)}</small></div><span class="pill ${w.active ? "good" : "bad"}">${w.active ? L("Chalu","On") : L("Band","Off")}</span><button class="btn sm ghost" data-act="wActive" data-id="${w.id}">${w.active ? L("Band karein","Turn off") : L("Chalu karein","Turn on")}</button></div>`).join("") || `<p class="mute">${L("Abhi koi ladka nahi banaya.","No staff added yet.")}</p>`}
+    <button class="btn wide ghost" data-act="newWorker" style="margin-top:12px">+ ${L("Naye ladkay ka login banayein","Add staff login")}</button></div>` : "";
+  return `<div class="card"><h2>${e(S.shop.name)}</h2><p class="mute" style="margin:0 0 8px">${e(S.me.email)}</p>${act}</div>
+  ${wk}
+  <div class="card f"><button class="btn ghost wide" data-act="lang">${LANG === "en" ? "Roman Urdu mein dekhein" : "Switch to English"}</button><button class="btn danger wide" data-act="logout">${L("Bahar niklein (logout)","Log out")}</button></div>`;
+}
+function fWorker(){ sheet(L("Naya ladka","New staff"), `<form class="f" data-form="worker">
+  <div><label for="wk_n">${L("Naam","Name")}</label><input id="wk_n" name="name" required></div>
+  <div><label for="wk_e">${L("Login email","Login email")}</label><input id="wk_e" name="email" type="email" required autocomplete="off"></div>
+  <div><label for="wk_p">${L("Password (kam az kam 6 harf)","Password (min 6 characters)")}</label><input id="wk_p" name="pw" minlength="6" required autocomplete="off"></div>
+  <button class="btn wide">${L("Login banayein","Create login")}</button></form>`); }
+
+/* ================= sheet ================= */
+function sheet(title, html){ $("#sheet").innerHTML = `<div class="sheet" data-act="bg"><div class="box" role="dialog" aria-label="${e(title)}"><div class="top"><h2>${e(title)}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>${html}</div></div>`; }
+function closeSheet(){ $("#sheet").innerHTML = ""; }
+
+/* ================= actions ================= */
+async function reloadRecs(){ S.recs = await api.records(S.shop.id); }
+const acts = {
+  tab: el => { S.tab = el.dataset.v; render(); window.scrollTo(0, 0); },
+  lang: () => { LANG = LANG === "en" ? "ru" : "en"; try { localStorage.setItem("ps_lang", LANG); } catch(_){} closeSheet(); render(); },
+  logout: async () => { await api.logout(); Object.assign(S, { me:null, shop:null, recs:[], admin:null, workers:[] }); closeSheet(); render(); },
+  demo: async el => { await api.login(el.dataset.v); await boot(); },
+  close: closeSheet,
+  bg: (el, ev) => { if (ev.target === el) closeSheet(); },
+  period: el => { S.period = el.dataset.v; render(); },
+  newShop: fNewShop, newCust: () => fCust(null), newExp: fExp, newProd: fProd, newSale: fSale, newWorker: fWorker, pick: fPick,
+  cust: el => sCust(el.dataset.id), editCust: el => fCust(cust(el.dataset.id)),
+  deliver: el => fDeliver(el.dataset.id), pay: el => fPay(el.dataset.id), print: el => printSlip(el.dataset.id),
+  fullpaid: () => { const f = $('form[data-form="deliver"]'); f.paid.value = Math.round(num(f.qty.value) * num(f.rate.value)); },
+  mod: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id); const mo = { ...s.modules, [el.dataset.k]: el.checked }; await api.updateShop(s.id, { modules: mo }); s.modules = mo; toast(L("Badal diya","Updated")); },
+  shopActive: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id); await api.updateShop(s.id, { active: !s.active }); s.active = !s.active; render(); },
+  wActive: async el => { const w = S.workers.find(x => x.id === el.dataset.id); await api.setProfileActive(w.id, !w.active); S.workers = await api.workers(S.shop.id); render(); },
+  maint: async el => { if (el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka? Dobara dabayein","Sure? Tap again"); return; } S.recs.push(await api.add(S.shop.id, "plant", today(), { t:"maint", item: el.dataset.v })); render(); toast(L("Likh diya","Saved")); },
+  del: async el => {
+    if (el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka?","Sure?"); setTimeout(() => { if (el.isConnected){ el.dataset.sure = ""; el.textContent = "✕"; } }, 3000); return; }
+    const r = S.recs.find(x => x.id === el.dataset.id); await api.del(el.dataset.id); S.recs = S.recs.filter(x => x.id !== el.dataset.id);
+    const open = $("#sheet").innerHTML && r && r.data.cust; render(); if (open) sCust(r.data.cust); toast(L("Delete ho gaya","Deleted"));
+  }
+};
+const forms = {
+  login: async o => { await api.login(o.email.trim(), o.pw); await boot(); },
+  newShop: async o => {
+    const modules = { bottle: !!o.m_bottle, tank: !!o.m_tank, plant: !!o.m_plant };
+    if (!modules.bottle && !modules.tank && !modules.plant) throw new Error(L("Kam az kam ek kaam chunein","Choose at least one type of work"));
+    await api.createShop({ name:o.name.trim(), owner:o.owner.trim(), phone:o.phone.trim(), email:o.email.trim(), pw:o.pw, modules });
+    S.admin = await api.shops(); closeSheet(); render(); toast(L("Client ban gaya","Client created"));
+  },
+  cust: async (o, f) => {
+    const data = { name:o.name.trim(), phone:o.phone.trim(), addr:o.addr.trim(), type:o.type, rate:num(o.rate), deposit:num(o.deposit) };
+    const id = f.dataset.id;
+    if (id){ await api.upd(id, data); cust(id).data = data; closeSheet(); render(); sCust(id); }
+    else { S.recs.push(await api.add(S.shop.id, "customer", today(), data)); closeSheet(); render(); }
+    toast(L("Mehfooz ho gaya","Saved"));
+  },
+  deliver: async (o, f) => {
+    const c = cust(f.dataset.id), qty = num(o.qty), rate = num(o.rate);
+    if (qty <= 0) throw new Error(L("Miqdaar likhein","Enter a quantity"));
+    const data = { cust:c.id, type:c.data.type, qty, ret:num(o.ret), rate, amount:qty * rate, paid:num(o.paid), by:S.me.name || S.me.email };
+    S.recs.push(await api.add(S.shop.id, "delivery", o.day || today(), data)); closeSheet(); render(); toast(L("Delivery likh di","Delivery saved"));
+  },
+  pay: async (o, f) => {
+    if (num(o.amount) <= 0) throw new Error(L("Raqam likhein","Enter an amount"));
+    S.recs.push(await api.add(S.shop.id, "payment", o.day || today(), { cust:f.dataset.id, amount:num(o.amount), by:S.me.name || S.me.email }));
+    closeSheet(); render(); sCust(f.dataset.id); toast(L("Wasooli likh di","Payment saved"));
+  },
+  exp: async o => { S.recs.push(await api.add(S.shop.id, "expense", o.day || today(), { cat:o.cat, amount:num(o.amount), mod:o.mod, note:o.note.trim() })); closeSheet(); render(); toast(L("Kharcha likh diya","Expense saved")); },
+  prod: async o => { S.recs.push(await api.add(S.shop.id, "plant", o.day || today(), { t:"prod", litres:num(o.litres), bottles:num(o.bottles) })); closeSheet(); render(); toast(L("Likh diya","Saved")); },
+  sale: async o => { S.recs.push(await api.add(S.shop.id, "sale", o.day || today(), { qty:num(o.qty), amount:num(o.amount), note:"" })); closeSheet(); render(); toast(L("Likh diya","Saved")); },
+  worker: async o => { await api.createWorker(S.shop.id, { name:o.name.trim(), email:o.email.trim(), pw:o.pw }); S.workers = await api.workers(S.shop.id); closeSheet(); render(); toast(L("Login ban gaya","Login created")); }
+};
+let busy = false;
+document.addEventListener("click", async ev => {
+  const el = ev.target.closest("[data-act]"); if (!el || el.tagName === "INPUT") return;
+  const fn = acts[el.dataset.act]; if (!fn) return;
+  try { await fn(el, ev); } catch(err){ toast(err.message || String(err)); }
+});
+document.addEventListener("change", async ev => {
+  const el = ev.target; if (el.dataset && el.dataset.act === "mod"){ try { await acts.mod(el); } catch(err){ el.checked = !el.checked; toast(err.message || String(err)); } }
+});
+document.addEventListener("submit", async ev => {
+  const f = ev.target.closest("form[data-form]"); if (!f) return; ev.preventDefault(); if (busy) return;
+  const o = Object.fromEntries(new FormData(f).entries()), btn = f.querySelector("button:not([type=button])");
+  busy = true; if (btn) btn.disabled = true;
+  try { await forms[f.dataset.form](o, f); } catch(err){ toast(err.message || String(err)); }
+  busy = false; if (btn && btn.isConnected) btn.disabled = false;
+});
+document.addEventListener("input", ev => {
+  const el = ev.target;
+  if (el.id === "q"){ S.q = el.value; const tmp = document.createElement("div"); tmp.innerHTML = vCust(); $("#custList").innerHTML = tmp.querySelector("#custList").innerHTML; }
+  else if (el.id === "pq") $("#pickList").innerHTML = pickRows(el.value);
+  else if (el.form && el.form.dataset.form === "deliver" && (el.name === "qty" || el.name === "rate")) $("#dv_amt").textContent = rs(num(el.form.qty.value) * num(el.form.rate.value));
+});
+
+if (DEMO) seedDemo();
+boot();
+</script>
+</body>
+</html>
