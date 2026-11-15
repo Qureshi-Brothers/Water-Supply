@@ -134,3 +134,20 @@ revoke execute on function public.soft_delete(uuid) from anon, public;
 revoke execute on function public.restore_record(uuid) from anon, public;
 grant execute on function public.soft_delete(uuid) to authenticated;
 grant execute on function public.restore_record(uuid) to authenticated;
+
+-- =====================================================
+-- UPDATE 3: malik PIN / settings / ladkay ka cash jama (sirf malik dekh sakta hai)
+-- =====================================================
+alter policy rec_read on public.records
+  using (deleted_at is null and shop_id = my_shop()
+         and (my_role() = 'owner' or kind not in ('expense','plant','sale','setting','handover')));
+
+create or replace function public.clear_pin(shop uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then return false; end if;
+  update records set data = data - 'pin' where shop_id = shop and kind = 'setting';
+  return true;
+end $$;
+revoke execute on function public.clear_pin(uuid) from anon, public;
+grant execute on function public.clear_pin(uuid) to authenticated;
