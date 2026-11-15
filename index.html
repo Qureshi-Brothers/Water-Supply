@@ -597,7 +597,8 @@ function fWorker(){ sheet(L("Naya ladka","New staff"), `<form class="f" data-for
 
 /* ================= sheet ================= */
 function sheet(title, html){ $("#sheet").innerHTML = `<div class="sheet" data-act="bg"><div class="box" role="dialog" aria-label="${e(title)}"><div class="top"><h2>${e(title)}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>${html}</div></div>`; }
-function closeSheet(){ $("#sheet").innerHTML = ""; }
+let lockUntil = 0;
+function closeSheet(){ if ($("#sheet").innerHTML) lockUntil = Date.now() + 800; $("#sheet").innerHTML = ""; }
 
 /* ================= actions ================= */
 async function reloadRecs(){ S.recs = await api.records(S.shop.id); }
@@ -614,7 +615,9 @@ const acts = {
   deliver: el => fDeliver(el.dataset.id), pay: el => fPay(el.dataset.id), print: el => printSlip(el.dataset.id),
   fullpaid: () => { const f = $('form[data-form="deliver"]'); f.paid.value = Math.round(num(f.qty.value) * num(f.rate.value)); },
   mod: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id); const mo = { ...s.modules, [el.dataset.k]: el.checked }; await api.updateShop(s.id, { modules: mo }); s.modules = mo; toast(L("Badal diya","Updated")); },
-  shopActive: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id); await api.updateShop(s.id, { active: !s.active }); s.active = !s.active; render(); },
+  shopActive: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id);
+    if (s.active && el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka band karein? Dobara dabayein","Really turn off? Tap again"); setTimeout(() => { if (el.isConnected) render(); }, 4000); return; }
+    await api.updateShop(s.id, { active: !s.active }); s.active = !s.active; render(); },
   wActive: async el => { const w = S.workers.find(x => x.id === el.dataset.id); await api.setProfileActive(w.id, !w.active); S.workers = await api.workers(S.shop.id); render(); },
   maint: async el => { if (el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka? Dobara dabayein","Sure? Tap again"); return; } S.recs.push(await api.add(S.shop.id, "plant", today(), { t:"maint", item: el.dataset.v })); render(); toast(L("Likh diya","Saved")); },
   del: async el => {
@@ -656,6 +659,7 @@ const forms = {
 };
 let busy = false;
 document.addEventListener("click", async ev => {
+  if (Date.now() < lockUntil) return;
   const el = ev.target.closest("[data-act]"); if (!el || el.tagName === "INPUT") return;
   const fn = acts[el.dataset.act]; if (!fn) return;
   try { await fn(el, ev); } catch(err){ toast(err.message || String(err)); }
@@ -666,9 +670,10 @@ document.addEventListener("change", async ev => {
 document.addEventListener("submit", async ev => {
   const f = ev.target.closest("form[data-form]"); if (!f) return; ev.preventDefault(); if (busy) return;
   const o = Object.fromEntries(new FormData(f).entries()), btn = f.querySelector("button:not([type=button])");
-  busy = true; if (btn) btn.disabled = true;
+  const old = btn ? btn.textContent : "";
+  busy = true; if (btn){ btn.disabled = true; btn.textContent = L("Ruk jayein, ho raha hai...","Please wait..."); }
   try { await forms[f.dataset.form](o, f); } catch(err){ toast(err.message || String(err)); }
-  busy = false; if (btn && btn.isConnected) btn.disabled = false;
+  busy = false; if (btn && btn.isConnected){ btn.disabled = false; btn.textContent = old; }
 });
 document.addEventListener("input", ev => {
   const el = ev.target;
