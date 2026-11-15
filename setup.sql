@@ -98,3 +98,39 @@ create policy rec_del on public.records for delete to authenticated
 -- insert into public.profiles (id, email, name, role)
 -- select id, email, 'Admin', 'admin' from auth.users where email = 'APNI-EMAIL@gmail.com';
 -- =====================================================
+
+-- =====================================================
+-- UPDATE 2: delete ki jagah chhupana (soft delete) + admin backup
+-- =====================================================
+alter table public.records add column if not exists deleted_at timestamptz;
+alter table public.records add column if not exists deleted_by uuid;
+alter policy rec_read on public.records
+  using (deleted_at is null and shop_id = my_shop() and (my_role() = 'owner' or kind not in ('expense','plant','sale')));
+alter policy rec_del on public.records using (false);
+drop policy if exists rec_admin_read on public.records;
+create policy rec_admin_read on public.records for select to authenticated using (is_admin());
+
+create or replace function public.soft_delete(rec uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  update records set deleted_at = now(), deleted_by = auth.uid()
+   where id = rec and deleted_at is null and shop_id = my_shop()
+     and (my_role() = 'owner' or (created_by = auth.uid() and day = current_date and kind in ('delivery','payment')));
+  get diagnostics n = row_count;
+  return n > 0;
+end $$;
+
+create or replace function public.restore_record(rec uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not is_admin() then return false; end if;
+  update records set deleted_at = null, deleted_by = null where id = rec;
+  get diagnostics n = row_count;
+  return n > 0;
+end $$;
+revoke execute on function public.soft_delete(uuid) from anon, public;
+revoke execute on function public.restore_record(uuid) from anon, public;
+grant execute on function public.soft_delete(uuid) to authenticated;
+grant execute on function public.restore_record(uuid) to authenticated;

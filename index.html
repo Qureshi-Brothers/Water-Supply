@@ -132,6 +132,11 @@ let LANG = "ru";
 try { LANG = localStorage.getItem("ps_lang") || "ru"; } catch(_){}
 const L = (ru, en) => LANG === "en" ? en : ru;
 function toast(msg){ const t=$("#toast"); t.firstElementChild.textContent=msg; t.style.display="flex"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",3200); }
+function download(name, text, type){
+  try { const u = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 8000); toast(L("File utar gayi: ","Downloaded: ") + name); }
+  catch(_){ toast(L("Yahan file nahi utar sakti","Download is not available here")); }
+}
+const csvCell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
 const IC = {
   drop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/></svg>',
@@ -244,10 +249,10 @@ const api = {
     const r = await sb.from("profiles").update({ active }).eq("id", id); if (r.error) throw r.error;
   },
   async records(shopId){
-    if (DEMO) return demo.recs.filter(r => r.shop_id === shopId).map(r => ({...r}));
+    if (DEMO) return demo.recs.filter(r => r.shop_id === shopId && !r.deleted_at).map(r => ({...r}));
     let out = [], from = 0;
     for(;;){
-      const r = await sb.from("records").select("*").eq("shop_id", shopId).order("created_at").range(from, from+999);
+      const r = await sb.from("records").select("*").eq("shop_id", shopId).is("deleted_at", null).order("created_at").range(from, from+999);
       if (r.error) throw r.error;
       out = out.concat(r.data); if (r.data.length < 1000) break; from += 1000;
     }
@@ -262,9 +267,26 @@ const api = {
     const r = await sb.from("records").update({ data }).eq("id", id); if (r.error) throw r.error;
   },
   async del(id){
-    if (DEMO){ demo.recs = demo.recs.filter(r => r.id !== id); return; }
-    const r = await sb.from("records").delete().eq("id", id).select(); if (r.error) throw r.error;
-    if (!r.data.length) throw new Error(L("Yeh delete karne ki ijazat nahi","Not allowed to delete this"));
+    if (DEMO){ const x = demo.recs.find(r => r.id === id); if (x) x.deleted_at = new Date().toISOString(); return; }
+    const r = await sb.rpc("soft_delete", { rec: id }); if (r.error) throw r.error;
+    if (!r.data) throw new Error(L("Yeh delete karne ki ijazat nahi","Not allowed to delete this"));
+  },
+  /* admin: ek shop ke ya sab ke records, delete hue bhi */
+  async allRecords(shopId){
+    if (DEMO) return demo.recs.filter(r => !shopId || r.shop_id === shopId).map(r => ({...r}));
+    let out = [], from = 0;
+    for(;;){
+      let q = sb.from("records").select("*").order("created_at").range(from, from+999);
+      if (shopId) q = q.eq("shop_id", shopId);
+      const r = await q; if (r.error) throw r.error;
+      out = out.concat(r.data); if (r.data.length < 1000) break; from += 1000;
+    }
+    return out;
+  },
+  async restore(id){
+    if (DEMO){ const x = demo.recs.find(r => r.id === id); if (x) x.deleted_at = null; return; }
+    const r = await sb.rpc("restore_record", { rec: id }); if (r.error) throw r.error;
+    if (!r.data) throw new Error(L("Wapas nahi aa saka","Could not restore"));
   }
 };
 
@@ -367,12 +389,32 @@ function vAdmin(){
       <span class="pill ${s.active ? "good" : "bad"}">${s.active ? L("Chalu","On") : L("Band","Off")}</span></div>
       <div class="f" style="margin-top:10px">
         ${["bottle","tank","plant"].map(k => `<label class="chk"><input type="checkbox" id="m_${s.id}_${k}" data-act="mod" data-id="${s.id}" data-k="${k}" ${s.modules[k] ? "checked" : ""}>${N[k]}</label>`).join("")}
-        <button class="btn sm ${s.active ? "danger" : ""}" data-act="shopActive" data-id="${s.id}" style="align-self:flex-start">${s.active ? L("Account band karein","Turn account off") : L("Account chalu karein","Turn account on")}</button>
+        <div class="acts"><button class="btn sm ghost" data-act="deleted" data-id="${s.id}">${L("Delete hui entries","Deleted entries")}</button>
+        <button class="btn sm ${s.active ? "danger" : ""}" data-act="shopActive" data-id="${s.id}">${s.active ? L("Account band karein","Turn account off") : L("Account chalu karein","Turn account on")}</button></div>
       </div></div>`;
   }).join("");
   return `<div class="tiles"><div class="tile"><b>${a.shops.length}</b><span>${L("Kul clients","Total clients")}</span></div><div class="tile good"><b>${a.shops.filter(s => s.active).length}</b><span>${L("Chalu","Active")}</span></div></div>
   <button class="btn wide" data-act="newShop">+ ${L("Naya client banayein","Add new client")}</button>
+  <button class="btn wide ghost" data-act="adminBackup">${L("Sab clients ka backup utaarein","Download backup of all clients")}</button>
   ${cards || `<p class="mute">${L("Abhi koi client nahi. Upar wale button se pehla client banayein.","No clients yet. Use the button above to add the first one.")}</p>`}`;
+}
+function describe(r, cm){
+  const d = r.data || {}, c = cm[d.cust] || "?";
+  if (r.kind === "delivery") return `${c} · ${d.qty} ${d.type === "tank" ? "L" : L("botal","bottles")} · ${rs(d.amount)}`;
+  if (r.kind === "payment") return `${c} · ${L("wasool","payment")} ${rs(d.amount)}`;
+  if (r.kind === "expense") return `${L("Kharcha","Expense")}: ${d.cat} ${rs(d.amount)}`;
+  if (r.kind === "sale") return `${L("Counter bikri","Counter sale")} ${rs(d.amount)}`;
+  if (r.kind === "plant") return d.t === "maint" ? `${d.item} ${L("badla","changed")}` : `${L("Pani bana","Production")} ${d.litres} L`;
+  if (r.kind === "customer") return `${L("Grahak","Customer")}: ${d.name}`;
+  return r.kind;
+}
+async function sDeleted(shopId){
+  const all = await api.allRecords(shopId), cm = {};
+  all.filter(r => r.kind === "customer").forEach(c => cm[c.id] = c.data.name);
+  const del = all.filter(r => r.deleted_at).sort((a, b) => String(b.deleted_at).localeCompare(String(a.deleted_at)));
+  const s = S.admin.shops.find(x => x.id === shopId);
+  sheet(`${L("Delete hui entries","Deleted entries")}: ${s ? s.name : ""}`, del.map(r => `<div class="row"><div class="g"><b>${e(describe(r, cm))}</b><small>${nice(r.day)} · ${L("delete hui","deleted")} ${nice(String(r.deleted_at).slice(0,10))}</small></div>
+    <button class="btn sm" data-act="restore" data-id="${r.id}" data-shop="${shopId}">${L("Wapas layein","Restore")}</button></div>`).join("") || `<p class="mute">${L("Is client ki koi entry delete nahi hui.","This client has no deleted entries.")}</p>`);
 }
 function fNewShop(){
   const N = MODN();
@@ -587,6 +629,10 @@ function vMore(){
     <button class="btn wide ghost" data-act="newWorker" style="margin-top:12px">+ ${L("Naye ladkay ka login banayein","Add staff login")}</button></div>` : "";
   return `<div class="card"><h2>${e(S.shop.name)}</h2><p class="mute" style="margin:0 0 8px">${e(S.me.email)}</p>${act}</div>
   ${wk}
+  ${isOwner() ? `<div class="card f"><h2>${L("Backup (data ki hifazat)","Backup (keep your data safe)")}</h2>
+    <p class="mute" style="margin:0">${L("Hafte mein ek dafa yeh file utaar kar WhatsApp ya Google Drive mein rakh lein.","Once a week, download this file and keep it in WhatsApp or Google Drive.")}</p>
+    <button class="btn wide" data-act="backup">${L("Poora backup utaarein","Download full backup")}</button>
+    ${supply() ? `<button class="btn wide ghost" data-act="csv">${L("Udhaar ki list (Excel) utaarein","Download credit list (Excel)")}</button>` : ""}</div>` : ""}
   <div class="card f"><button class="btn ghost wide" data-act="lang">${LANG === "en" ? "Roman Urdu mein dekhein" : "Switch to English"}</button><button class="btn danger wide" data-act="logout">${L("Bahar niklein (logout)","Log out")}</button></div>`;
 }
 function fWorker(){ sheet(L("Naya ladka","New staff"), `<form class="f" data-form="worker">
@@ -618,6 +664,23 @@ const acts = {
   shopActive: async el => { const s = S.admin.shops.find(x => x.id === el.dataset.id);
     if (s.active && el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka band karein? Dobara dabayein","Really turn off? Tap again"); setTimeout(() => { if (el.isConnected) render(); }, 4000); return; }
     await api.updateShop(s.id, { active: !s.active }); s.active = !s.active; render(); },
+  backup: () => {
+    const name = "backup-" + S.shop.name.replace(/[^a-z0-9]+/gi, "-") + "-" + today() + ".json";
+    download(name, JSON.stringify({ app:"Paani Supply Hisaab", date:new Date().toISOString(), shop:S.shop, staff:S.workers.map(w => ({ name:w.name, email:w.email, active:w.active })), records:S.recs }, null, 1), "application/json");
+  },
+  csv: () => {
+    const st = custStats(), rows = [["Naam","Phone","Pata","Kaam","Rate","Baqaya (udhaar)","Botal us ke paas","Security"]];
+    of("customer").slice().sort((a, b) => a.data.name.localeCompare(b.data.name)).forEach(c => { const s = st[c.id] || { bal:0, held:0 }; rows.push([c.data.name, c.data.phone, c.data.addr, c.data.type === "tank" ? "Tanki" : "Botal", c.data.rate, Math.round(s.bal), c.data.type === "bottle" ? s.held : "", c.data.deposit || 0]); });
+    download("udhaar-list-" + today() + ".csv", "\ufeff" + rows.map(r => r.map(csvCell).join(",")).join("\r\n"), "text/csv");
+  },
+  adminBackup: async el => {
+    el.textContent = L("Ruk jayein...","Please wait...");
+    const a = await api.shops(), recs = await api.allRecords(null);
+    download("admin-backup-" + today() + ".json", JSON.stringify({ app:"Paani Supply Hisaab", date:new Date().toISOString(), shops:a.shops, profiles:a.profiles, records:recs }, null, 1), "application/json");
+    render();
+  },
+  deleted: el => sDeleted(el.dataset.id),
+  restore: async el => { await api.restore(el.dataset.id); toast(L("Entry wapas aa gayi","Entry restored")); await sDeleted(el.dataset.shop); },
   wActive: async el => { const w = S.workers.find(x => x.id === el.dataset.id); await api.setProfileActive(w.id, !w.active); S.workers = await api.workers(S.shop.id); render(); },
   maint: async el => { if (el.dataset.sure !== "1"){ el.dataset.sure = "1"; el.textContent = L("Pakka? Dobara dabayein","Sure? Tap again"); return; } S.recs.push(await api.add(S.shop.id, "plant", today(), { t:"maint", item: el.dataset.v })); render(); toast(L("Likh diya","Saved")); },
   del: async el => {
